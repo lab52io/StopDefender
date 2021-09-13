@@ -221,15 +221,6 @@ int main(int argc, char** argv) {
 	// Print whoami to compare to thread later
 	printf("[+] Current user is: %s\n", (get_username()).c_str());
 
-	// Grab PID WINLOGON from command line argument
-	//char *pid_c = argv[1];
-	//DWORD PID_TO_IMPERSONATE = atoi(pid_c);
-
-	// Grab PID TI from command line argument
-	//char *pid_ti = argv[2];
-	//DWORD PID_TO_IMPERSONATE_TI = atoi(pid_ti);
-
-
 	// Searching for Winlogon PID 
 	DWORD PID_TO_IMPERSONATE = GetProcessByName(L"winlogon.exe");
 
