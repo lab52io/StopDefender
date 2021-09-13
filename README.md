@@ -1,5 +1,10 @@
 # StopDefender
-Stop Windows Defender programmatically
+Stop Windows Defender programmatically using Steal token from TrustedInstaller and winlogon processes.
+One button stop action, no need for supply commandline options nor pid. Usefull for integration with Post Explotation frameworks.
+![](Img/TI.png)
+
+# Blogpost
+
 # Credits
 * https://github.com/slyd0g/PrimaryTokenTheft
 * https://posts.specterops.io/understanding-and-defending-against-access-token-theft-finding-alternatives-to-winlogon-exe-80696c8a73b
