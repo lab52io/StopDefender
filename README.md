@@ -8,6 +8,7 @@ One button stop action, no need for supply commandline options nor pid. Usefull 
 ![](Img/TIexec.png)
 
 # Blogpost
+https://www.securityartwork.es/2021/09/27/trustedinstaller-parando-windows-defender/
 
 # Credits
 * https://github.com/slyd0g/PrimaryTokenTheft
