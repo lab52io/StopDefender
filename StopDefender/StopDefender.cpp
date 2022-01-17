@@ -210,14 +210,6 @@ int main(int argc, char** argv) {
 		printf("[+] SeDebugPrivilege enabled!\n");
 	}
 
-
-	// Starting TI service from SC Manager
-	if (StartTrustedInstallerService())
-		printf("[+] TrustedInstaller Service Started!\n");
-	else {
-		exit (1);
-	}
-
 	// Print whoami to compare to thread later
 	printf("[+] Current user is: %s\n", (get_username()).c_str());
 
@@ -230,16 +222,7 @@ int main(int argc, char** argv) {
 	}else
 		printf("[+] Winlogon process found!\n");
 
-	// Searching for TrustedInstaller PID 
-	DWORD PID_TO_IMPERSONATE_TI = GetProcessByName(L"TrustedInstaller.exe");
-
-	if (PID_TO_IMPERSONATE_TI == NULL) {
-		printf("[-] TrustedInstaller process not found\n");
-		exit(1);
-	}
-	else
-		printf("[+] TrustedInstaller process found!\n");
-
+	
 	// Call OpenProcess() to open WINLOGON, print return code and error code
 	HANDLE processHandle = OpenProcess(PROCESS_QUERY_INFORMATION, true, PID_TO_IMPERSONATE);
 	if (GetLastError() == NULL)
@@ -277,8 +260,26 @@ int main(int argc, char** argv) {
 
 	CloseHandle(processHandle);
 	CloseHandle(tokenHandle);
+	
+	
+	// Starting TI service from SC Manager
+	if (StartTrustedInstallerService())
+		printf("[+] TrustedInstaller Service Started!\n");
+	else {
+		exit (1);
+	}
 
+	// Searching for TrustedInstaller PID 
+	DWORD PID_TO_IMPERSONATE_TI = GetProcessByName(L"TrustedInstaller.exe");
 
+	if (PID_TO_IMPERSONATE_TI == NULL) {
+		printf("[-] TrustedInstaller process not found\n");
+		exit(1);
+	}
+	else
+		printf("[+] TrustedInstaller process found!\n");
+
+	
 	// Call OpenProcess() to open TRUSTEDINSTALLER, print return code and error code
 	processHandle = OpenProcess(PROCESS_QUERY_INFORMATION, true, PID_TO_IMPERSONATE_TI);
 	if (GetLastError() == NULL)
