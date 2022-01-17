@@ -148,10 +148,17 @@ BOOL StartTrustedInstallerService() {
 		0,           // number of arguments 
 		NULL))      // no arguments 
 	{
-		printf("[-] StartService failed (%d)\n", GetLastError());
-		CloseServiceHandle(schService);
-		CloseServiceHandle(schSCManager);
-		return FALSE;
+		if (ERROR_SERVICE_ALREADY_RUNNING == GetLastError()) {
+			printf("[+] TrustedInstaller already running\n");
+			SetLastError(0);
+		}
+		else {
+
+			printf("[-] TrustedInstaller StartService failed (%d)\n", GetLastError());
+			CloseServiceHandle(schService);
+			CloseServiceHandle(schSCManager);
+			return FALSE;
+		}
 	}
 
 	Sleep(2000);
@@ -201,7 +208,7 @@ int main(int argc, char** argv) {
 	ZeroMemory(&processInformation, sizeof(PROCESS_INFORMATION));
 	startupInfo.cb = sizeof(STARTUPINFO);
 
-
+	/*
 	// Add SE debug privilege
 	HANDLE currentTokenHandle = NULL;
 	BOOL getCurrentToken = OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &currentTokenHandle);
@@ -209,7 +216,7 @@ int main(int argc, char** argv) {
 	{
 		printf("[+] SeDebugPrivilege enabled!\n");
 	}
-
+	*/
 
 	// Starting TI service from SC Manager
 	if (StartTrustedInstallerService())
@@ -241,7 +248,7 @@ int main(int argc, char** argv) {
 		printf("[+] TrustedInstaller process found!\n");
 
 	// Call OpenProcess() to open WINLOGON, print return code and error code
-	HANDLE processHandle = OpenProcess(PROCESS_QUERY_INFORMATION, true, PID_TO_IMPERSONATE);
+	HANDLE processHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, true, PID_TO_IMPERSONATE);
 	if (GetLastError() == NULL)
 		printf("[+] WINLOGON OpenProcess() success!\n");
 	else
@@ -280,7 +287,7 @@ int main(int argc, char** argv) {
 
 
 	// Call OpenProcess() to open TRUSTEDINSTALLER, print return code and error code
-	processHandle = OpenProcess(PROCESS_QUERY_INFORMATION, true, PID_TO_IMPERSONATE_TI);
+	processHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, true, PID_TO_IMPERSONATE_TI);
 	if (GetLastError() == NULL)
 		printf("[+] TRUSTEDINSTALLER OpenProcess() success!\n");
 	else
