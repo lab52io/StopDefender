@@ -1,4 +1,4 @@
-# StopDefender [Patched Feb 22]
+# StopDefender V.1.0.0 [Patched Feb 22]
 Stop Windows Defender programmatically using Steal token from TrustedInstaller and winlogon processes.
 
 ![](Img/TI.png)
