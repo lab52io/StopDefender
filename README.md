@@ -1,7 +1,7 @@
 # StopDefender
 Stop Windows Defender programmatically creating a new token using TrustedInstaller and Windefend service accounts.
 
-![](Img/TI.png)
+![](Img/TI2.png)
 
 One button stop action, no need for supply commandline options nor pid. Usefull for integration with Post Explotation frameworks.
 
