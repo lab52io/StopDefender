@@ -5,7 +5,7 @@ Stop Windows Defender programmatically creating a new token using TrustedInstall
 
 One button stop action, no need for supply commandline options nor pid. Usefull for integration with Post Explotation frameworks.
 
-![](Img/TIexec.png)
+![](Img/TIexec2.png)
 
 # Blogpost
 https://www.securityartwork.es/2021/09/27/trustedinstaller-parando-windows-defender/
