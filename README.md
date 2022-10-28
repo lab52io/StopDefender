@@ -1,5 +1,5 @@
 # StopDefender
-Stop Windows Defender programmatically using Steal token from TrustedInstaller and winlogon processes.
+Stop Windows Defender programmatically creating a new token using TrustedInstaller and Windefend service accounts.
 
 ![](Img/TI.png)
 
@@ -17,3 +17,6 @@ https://www.securityartwork.es/2021/09/27/trustedinstaller-parando-windows-defen
 * https://docs.microsoft.com/en-us/windows/win32/com/impersonation-levels
 * https://halove23.blogspot.com/2021/08/executing-code-in-context-of-trusted.html
 * https://docs.microsoft.com/es-es/windows/win32/api/winsvc/ns-winsvc-service_sid_info?redirectedfrom=MSDN
+* https://www.alex-ionescu.com/?paged=2&cat=2
+* https://github.com/rbmm/DisableSvc
+
