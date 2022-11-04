@@ -10,7 +10,7 @@ One button stop action, no need for supply commandline options nor pid. Usefull 
 # Blogpost
 https://www.securityartwork.es/2021/09/27/trustedinstaller-parando-windows-defender/
 
-#Presentations
+# Presentations
 ![](Presentations/[Rootedcon Valencia 2022] Kill -9 Windows Defender.pdf)
 
 # Credits
